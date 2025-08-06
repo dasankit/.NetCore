@@ -1,0 +1,122 @@
+To **call an Azure Synapse pipeline from a REST API**, you can use **Azure Synapse REST API**, which allows you to programmatically trigger Synapse pipelines using a secured HTTP call.
+
+Here's a step-by-step guide:
+
+---
+
+### ✅ **Step 1: Register an Azure AD App**
+
+You need an Azure Active Directory (AAD) app to authenticate your REST API call.
+
+1. Go to **Azure Portal → Azure Active Directory → App registrations → New registration**.
+2. Name the app and set:
+
+   * Redirect URI: Optional
+3. After registration:
+
+   * Note the **Application (client) ID**
+   * Note the **Directory (tenant) ID**
+4. Go to **Certificates & Secrets → New client secret** → Save the **value**.
+
+---
+
+### ✅ **Step 2: Assign Role to the AAD App in Synapse**
+
+1. Go to your **Synapse workspace** → **Access control (IAM)**.
+2. Add a **role assignment**:
+
+   * Role: **Synapse Contributor** (or Synapse Administrator)
+   * Assign access to: **User, group, or service principal**
+   * Select your registered AAD App
+
+---
+
+### ✅ **Step 3: Get OAuth2 Token**
+
+Use the following `POST` request to get the bearer token:
+
+**URL:**
+
+```
+https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token
+```
+
+**Headers:**
+
+```
+Content-Type: application/x-www-form-urlencoded
+```
+
+**Body:**
+
+```x-www-form-urlencoded
+client_id=<client-id>
+client_secret=<client-secret>
+grant_type=client_credentials
+scope=https://dev.azuresynapse.net/.default
+```
+
+---
+
+### ✅ **Step 4: Call Synapse Pipeline**
+
+After getting the **access token**, make the following **HTTP POST** request:
+
+**URL:**
+
+```
+https://<synapse-workspace-name>.dev.azuresynapse.net/pipelines/<pipeline-name>/createRun?api-version=2020-12-01
+```
+
+**Headers:**
+
+```http
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+**Body (optional):**
+
+```json
+{
+  "RunId": "",
+  "parameters": {
+    "param1": "value1",
+    "param2": "value2"
+  }
+}
+```
+
+---
+
+### ✅ **Code Example (C#)**
+
+```csharp
+using System.Net.Http.Headers;
+
+var client = new HttpClient();
+client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+var requestBody = new {
+    parameters = new {
+        param1 = "value1"
+    }
+};
+
+var content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+
+var response = await client.PostAsync("https://<synapse-name>.dev.azuresynapse.net/pipelines/<pipeline-name>/createRun?api-version=2020-12-01", content);
+string result = await response.Content.ReadAsStringAsync();
+```
+
+---
+
+### 🧠 Notes:
+
+* Replace `<synapse-name>`, `<pipeline-name>`, `<tenant-id>`, `<client-id>`, `<client-secret>` with actual values.
+* You can trigger this from any backend (C#, Python, Node.js, etc.).
+* You can monitor the run using Synapse REST API or Synapse Studio.
+
+---
+
+Do you want a sample in **Postman**, **Python**, or **ASP.NET Core** as well?
